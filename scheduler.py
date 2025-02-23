@@ -34,13 +34,36 @@ class RoundRobinScheduler(Scheduler):
     A class to represent a round-robin scheduler in an operating system. This scheduler will 
     allot a fixed time quantum to each process in the queue.
     """
-    
+
     def __init__(self, quantum: int) -> None:
         self.quantum: int = quantum
         self.queue: deque[Process] = deque()
 
     def get_alloted_time(self, process: Process) -> int:
         return self.quantum
+
+    def add_process(self, process: Process) -> None:
+        self.queue.append(process)
+
+    def get_next_process(self) -> Process:
+        if not self.queue:
+            raise Exception("No processes available")
+        return self.queue.popleft()
+
+    def has_processes(self) -> bool:
+        return bool(self.queue)
+    
+class SimpleScheduler(Scheduler):
+    """
+    A class to represent a simple scheduler in an operating system. This scheduler will 
+    run processes to completion in the order they arrive.
+    """
+
+    def __init__(self) -> None:
+        self.queue: deque[Process] = deque()
+
+    def get_alloted_time(self, process: Process) -> int:
+        return process.time_to_completion
 
     def add_process(self, process: Process) -> None:
         self.queue.append(process)
