@@ -47,7 +47,6 @@ class IOManager:
             if clock_time >= completion:
                 process.state = ProcessState.READY
                 ready_processes.append(process)
-                print(f"I/O Manager: Process {process.pid} I/O completed at simulation clock {clock_time}.")
             else:
                 still_waiting.append((process, completion))
         self.waiting_processes = still_waiting

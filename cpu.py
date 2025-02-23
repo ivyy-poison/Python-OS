@@ -48,16 +48,18 @@ class CPU:
                 process.state = ProcessState.RUNNING
                 time_to_run = self.scheduler.get_alloted_time(process)
                 time_ran = process.run_for(time_to_run)
-
+                print(f"{self.get_current_time()}: Process {process.pid} ran for {time_ran} time units.")
                 self.increment_global_clock(time_ran)
-
+                
                 if process.is_in_io_state():
                     self.io_manager.add_waiting_process(process, self.get_current_time())
-
-                elif not process.is_terminated():
-                    self.scheduler.add_process(process)
+                    continue
+                elif process.is_terminated():
+                    continue
 
                 process.state = ProcessState.READY
+                self.scheduler.add_process(process)
+                
    
             else:
                 self.increment_global_clock(1)
