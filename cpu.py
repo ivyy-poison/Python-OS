@@ -1,5 +1,6 @@
 from scheduler import Scheduler
 from process import Process
+from io_manager import IOManager
 
 class CPU:
     """
@@ -7,27 +8,42 @@ class CPU:
     in a loop until there are no processes left.
     """
 
-    def __init__(self, scheduler: Scheduler) -> None:
+    def __init__(self, scheduler: Scheduler, io_manager: IOManager) -> None:
         self.scheduler: Scheduler = scheduler
+        self.io_manager: IOManager = io_manager
+        self.global_clock = 0
+
+    def increment_global_clock(self, time: int) -> None:
+        self.global_clock += time
+
+    def get_current_time(self) -> int:
+        return self.global_clock
 
     def run(self) -> None:
         """
         Run the processes in a loop until there are no processes left.
         """
         print("CPU starting...")
-        order_of_processes = []
 
-        while self.scheduler.has_processes():
-            process: Process = self.scheduler.get_next_process()
-            
-            time_to_run = self.scheduler.get_alloted_time(process)
-            time_ran = process.run_for(time_to_run)
-            if not process.is_terminated():
+        while self.scheduler.has_processes() or self.io_manager.waiting_processes:
+
+            for process in self.io_manager.update(self.get_current_time()):
                 self.scheduler.add_process(process)
-            order_of_processes.append(f"{process}:  {time_ran}")
 
+            if self.scheduler.has_processes():
+                
+                process: Process = self.scheduler.get_next_process()
+                time_to_run = self.scheduler.get_alloted_time(process)
+                time_ran = process.run_for(time_to_run)
+                self.increment_global_clock(time_ran)
+                if process.is_in_io_state():
+                    self.io_manager.add_waiting_process(process, self.get_current_time())
+
+                elif not process.is_terminated():
+                    self.scheduler.add_process(process)
+   
+            else:
+                self.increment_global_clock(1)
+                
         print("CPU has finished running all processes.")
-        print(f"Order of processes run:")
-        for process in order_of_processes:
-            print(process)
 
