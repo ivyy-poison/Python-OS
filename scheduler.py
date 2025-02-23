@@ -1,6 +1,6 @@
 import abc
 from collections import deque
-from process import Process
+from process import Process, ProcessState
 
 class Scheduler(abc.ABC):
     """
@@ -11,7 +11,12 @@ class Scheduler(abc.ABC):
 
     @abc.abstractmethod
     def get_alloted_time(self, process: Process) -> int:
-        """Return the amount of time to allot to a process."""
+        """
+        Return the amount of time to allot to a process.
+        
+        Args:
+        process (Process): The process to allot time to.
+        """
         pass
 
     @abc.abstractmethod
@@ -43,6 +48,9 @@ class RoundRobinScheduler(Scheduler):
         return self.quantum
 
     def add_process(self, process: Process) -> None:
+        assert process.state == ProcessState.READY, (
+            f"Process {process.pid} cannot be added because it is in state {process.state}"
+        )
         self.queue.append(process)
 
     def get_next_process(self) -> Process:
@@ -66,6 +74,9 @@ class SimpleScheduler(Scheduler):
         return process.time_to_completion
 
     def add_process(self, process: Process) -> None:
+        assert process.state == ProcessState.READY, (
+            f"Process {process.pid} cannot be added because it is in state {process.state}"
+        )
         self.queue.append(process)
 
     def get_next_process(self) -> Process:

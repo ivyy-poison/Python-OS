@@ -1,5 +1,5 @@
 from scheduler import Scheduler
-from process import Process
+from process import Process, ProcessState
 from io_manager import IOManager
 
 class CPU:
@@ -14,9 +14,21 @@ class CPU:
         self.global_clock = 0
 
     def increment_global_clock(self, time: int) -> None:
+        """
+        Simulate the passage of time by incrementing the global clock.
+        
+        Args:
+        time (int): The amount of time to increment the clock by.
+        """
         self.global_clock += time
 
     def get_current_time(self) -> int:
+        """
+        Get the current time of the simulation clock.
+        
+        Returns:
+        int: The current time of the simulation clock.
+        """
         return self.global_clock
 
     def run(self) -> None:
@@ -33,14 +45,19 @@ class CPU:
             if self.scheduler.has_processes():
                 
                 process: Process = self.scheduler.get_next_process()
+                process.state = ProcessState.RUNNING
                 time_to_run = self.scheduler.get_alloted_time(process)
                 time_ran = process.run_for(time_to_run)
+
                 self.increment_global_clock(time_ran)
+
                 if process.is_in_io_state():
                     self.io_manager.add_waiting_process(process, self.get_current_time())
 
                 elif not process.is_terminated():
                     self.scheduler.add_process(process)
+
+                process.state = ProcessState.READY
    
             else:
                 self.increment_global_clock(1)
