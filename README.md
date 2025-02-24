@@ -6,6 +6,10 @@ This is my second time going through OStep, yet I can't quite seem to get my fun
 
 Todo:
 - ~~Implement I/O simulation~~
-- Improve logging for monitoring of various components
-- Implement MLFQ
+- ~~Implement MLFQ Scheduler~~
+- Implement Lottery scheduler
+- Build extensible design for IOManager, then potentially expand into memory and disk management simulations
 - Further away type of goals include: Simulating memory management and file systems (If I even get that far)
+- Improve logging for monitoring of various components
+  - Note: Stretch goals because I presently have no intentions of incorporating external dependencies into this model yet.
+  - But ideally I wish to be able to isolate logging not only by levels but by components as well.
