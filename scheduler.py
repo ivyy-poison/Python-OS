@@ -1,7 +1,7 @@
 import abc
 from collections import deque
 from process import Process, ProcessState
-from typing import Dict, List
+from typing import Dict, List, Deque
 
 class Scheduler(abc.ABC):
     """
@@ -43,7 +43,7 @@ class RoundRobinScheduler(Scheduler):
 
     def __init__(self, quantum: int) -> None:
         self.quantum: int = quantum
-        self.queue: deque[Process] = deque()
+        self.queue: Deque[Process] = deque()
 
     def get_alloted_time(self, process: Process) -> int:
         return self.quantum
@@ -69,7 +69,7 @@ class SimpleScheduler(Scheduler):
     """
 
     def __init__(self) -> None:
-        self.queue: deque[Process] = deque()
+        self.queue: Deque[Process] = deque()
 
     def get_alloted_time(self, process: Process) -> int:
         return process.time_to_completion
@@ -98,7 +98,7 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
     - If a process consumes its entire quantum at a given level, it is demoted.
     - An auto bump resets all processes back to the highest priority level at fixed intervals to avoid starvation.
     """
-    def __init__(self, quanta: list[int] = None, auto_bump_interval: int = 5) -> None:
+    def __init__(self, quanta: list[int] = None, auto_bump_interval: int = 5, boost_threshold: int = 50) -> None:
         """
         Args:
         quanta (list[int], optional): A list of time quanta for each level. If not provided, defaults to [3,6,12].
@@ -107,11 +107,14 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         if quanta is None:
             quanta = [3, 6, 12]
         self.levels = quanta
-        self.queues: List[deque] = [deque() for _ in range(len(quanta))]
-        self.process_levels: Dict[int] = {}                       # mapping: process.pid -> current level
-        self.process_time_in_level: Dict[int] = {}                # mapping: process.pid -> accumulated usage time at this level
-        self.process_previous_time_to_completion: Dict[int] = {}  # mapping: process.pid -> time to completion before last run
+        self.queues: List[Deque[Process]] = [deque() for _ in range(len(quanta))]
+        self.process_levels: Dict[int, int] = {}                        # process.pid -> current level
+        self.process_time_in_level: Dict[int, int] = {}                 # process.pid -> accumulated usage time at current level
+        self.process_previous_cumulative_runtime: Dict[int, int] = {}   # process.pid -> previous cumulative runtime
+
+        self.process_last_boost: Dict[int, int] = {}                    # process.pid -> last time the process was boosted
         self.auto_bump_interval = auto_bump_interval
+        self.boost_threshold = boost_threshold
         self.last_bump_time = 0
 
     def get_alloted_time(self, process: Process) -> int:
@@ -130,17 +133,41 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
             self.process_levels[process.pid] = 0
             self.process_time_in_level[process.pid] = 0
         else:
-            time_used = self.process_previous_time_to_completion[process.pid] - process.time_to_completion
+            time_used = process.cumulative_time_ran - self.process_previous_cumulative_runtime[process.pid]
             self.update_usage_time(process, time_used)
-        self.process_previous_time_to_completion[process.pid] = process.time_to_completion
+        self.process_previous_cumulative_runtime[process.pid] = process.cumulative_time_ran
         level = self.process_levels[process.pid]
-        queue: deque = self.queues[level]
+        queue = self.queues[level]
         queue.append(process)
+
+    def auto_boost_processes(self) -> None:
+        """
+        For every process in all queues, check if it has run an additional boost_threshold units
+        since its last priority boost. If so, move it to the highest priority.
+        """
+        for level in range(1, len(self.queues)):
+            new_queue = deque()
+            while self.queues[level]:
+                process = self.queues[level].popleft()
+                pid = process.pid
+                last_boost = self.process_last_boost.get(pid, 0)
+                # If the cumulative time ran has increased by at least boost_threshold since last boost,
+                # move the process to top priority.
+                if process.cumulative_time_ran - last_boost >= self.boost_threshold:
+                    self.process_levels[pid] = 0
+                    self.process_time_in_level[pid] = 0
+                    self.process_last_boost[pid] = process.cumulative_time_ran
+                    self.queues[0].append(process)
+                    print(f"Auto boost: Process {pid} boosted to top priority.")
+                else:
+                    new_queue.append(process)
+            self.queues[level] = new_queue
 
     def get_next_process(self) -> Process:
         """
         Search the queues starting from the highest priority level and return the first process found.
         """
+        self.auto_boost_processes()
         for q in self.queues:
             if q:
                 return q.popleft()

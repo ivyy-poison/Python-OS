@@ -29,6 +29,7 @@ class Process:
         self.pid: int = Process._next_pid
         self.arrival_time: int = arrival_time
         self.time_to_completion: int = time_to_completion if time_to_completion else random.randint(5, 10)
+        self.cumulative_time_ran: int = 0
         self.io_probability: float = io_probability
         self.state: ProcessState = ProcessState.READY
         self.__increment_global_pid()
@@ -56,6 +57,7 @@ class Process:
             ## An I/O Event has occurred
             effective_run_time = random.randint(1, max_run - 1)
             self.time_to_completion -= effective_run_time
+            self.cumulative_time_ran += effective_run_time
             self.state = ProcessState.WAITING
             print(f"Process {self.pid} triggered I/O after running for {effective_run_time} time units.")
             return effective_run_time
@@ -63,6 +65,7 @@ class Process:
             ## An I/O Event has not occurred
             actual_time = max_run
             self.time_to_completion -= actual_time
+            self.cumulative_time_ran += actual_time
             if self.time_to_completion <= 0:
                 self.terminate()
             print(f"Process {self.pid} ran for {actual_time} time units without I/O.")
