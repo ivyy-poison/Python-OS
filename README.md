@@ -7,7 +7,11 @@ This is my second time going through OStep, yet I can't quite seem to get my fun
 Todo:
 - ~~Implement I/O simulation~~
 - ~~Implement MLFQ Scheduler~~
-- Implement Lottery scheduler
+- ~~Implement Lottery scheduler~~
+- ~~Implement Completely Fair Scheduler (CFS)~~
+  - Potentially implement own red-black tree
+  - Potentially incorporate priority
+- Implement File System
 - Build extensible design for IOManager, then potentially expand into memory and disk management simulations
 - Further away type of goals include: Simulating memory management and file systems (If I even get that far)
 - Improve logging for monitoring of various components

@@ -1,13 +1,21 @@
 from cpu import CPU
-from scheduler import RoundRobinScheduler, SimpleScheduler, MultiLevelFeedbackQueueScheduler, LotteryScheduler
+from scheduler import (
+    RoundRobinScheduler, 
+    SimpleScheduler, 
+    MultiLevelFeedbackQueueScheduler, 
+    LotteryScheduler,
+    CompletelyFairScheduler
+)
 from process import Process
 from io_manager import IOManager
 
 if __name__ == "__main__":
     scheduler = RoundRobinScheduler(quantum=3)
-    # scheduler = SimpleScheduler()
+    scheduler = SimpleScheduler()
     scheduler = MultiLevelFeedbackQueueScheduler()
     scheduler = LotteryScheduler()
+    scheduler = CompletelyFairScheduler()
+
     io_manager = IOManager()
 
     processes = [Process(arrival_time=0) for i in range(1, 6)]
