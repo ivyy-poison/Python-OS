@@ -137,6 +137,7 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         else:
             time_used = process.cumulative_time_ran - self.process_previous_cumulative_runtime[process.pid]
             self.update_usage_time(process, time_used)
+
         self.process_previous_cumulative_runtime[process.pid] = process.cumulative_time_ran
         level = self.process_levels[process.pid]
         queue = self.queues[level]
@@ -214,6 +215,7 @@ class LotteryScheduler(Scheduler):
         self.default_quantum = default_quantum
         self.processes: Dict[int, Process] = {}          # Mapping from pid to process.
         self.tickets: Dict[int, int] = {}                # Mapping from pid to ticket count.
+        self.total_tickets = 0
     
     def get_alloted_time(self, process: Process) -> int:
         """
@@ -237,6 +239,7 @@ class LotteryScheduler(Scheduler):
         )
         self.processes[process.pid] = process
         self.tickets[process.pid] = tickets
+        self.total_tickets += tickets
 
     def get_next_process(self) -> Process:
         """
@@ -245,15 +248,14 @@ class LotteryScheduler(Scheduler):
         if not self.has_processes():
             raise Exception("No processes available")
         
-        total_tickets = sum(self.tickets.values())
-        winning_ticket = random.randint(1, total_tickets)
+        winning_ticket = random.randint(1, self.total_tickets)
         
         cum_sum = 0
         for pid, ticket_count in self.tickets.items():
             cum_sum += ticket_count
             if winning_ticket <= cum_sum:
                 chosen = self.processes.pop(pid)
-                self.tickets.pop(pid)
+                self.total_tickets -= self.tickets.pop(pid)
                 return chosen
         
         # Fallback (should not happen)
@@ -286,10 +288,11 @@ class CompletelyFairScheduler(Scheduler):
     
     def get_alloted_time(self, process: Process) -> int:
         """
-        Return the quantum for the process, calculated as the fair share of the base quantum.
+        Return the quantum for the process, calculated as the fair share of the base quantum by dividing it 
+        by the number of processes in the scheduler plus one (the current process), and taking the maximum
+        with the minimum quantum.
         """
-        n = len(self.virtual_tree)
-        quantum = self.base_quantum // ( n + 1 ) ## 1 includes the current process that has left the scheduler but is being ran
+        quantum = self.base_quantum // ( len(self.virtual_tree) + 1 ) 
         return max(quantum, self.min_quantum)
     
     def add_process(self, process: Process) -> None:
@@ -299,8 +302,7 @@ class CompletelyFairScheduler(Scheduler):
         We store the process in the virtual tree with key (vruntime, pid).
         """        
         if self.virtual_tree:
-            # Get the smallest vruntime currently in the tree.
-            (min_vruntime, _), _ = self.virtual_tree.peekitem(0)
+            (min_vruntime, _), _ = self.virtual_tree.peekitem(0) ## Get the smallest runtime
             self.id_to_vruntime[process.pid] = max(process.cumulative_time_ran, min_vruntime)
         else:
             self.id_to_vruntime[process.pid] = process.cumulative_time_ran
