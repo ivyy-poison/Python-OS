@@ -47,6 +47,10 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         if process.pid not in self.process_levels:
             self.process_levels[process.pid] = 0
             self.process_time_in_level[process.pid] = 0
+            from learning_os.cpu import CPU 
+            curr_time = CPU.get_current_time()
+            self.process_last_boost[process.pid] = curr_time
+
         else:
             time_used = process.cumulative_time_ran - self.process_previous_cumulative_runtime[process.pid]
             self.update_usage_time(process, time_used)
@@ -58,25 +62,31 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
 
     def auto_boost_processes(self) -> None:
         """
-        For every process in all queues, check if it has run an additional boost_threshold units
-        since its last priority boost. If so, move it to the highest priority.
+        For every process in all queues (except the top-level),
+        check if the time elapsed since its last boost (as stored in process_last_boost)
+        is greater than or equal to boost_threshold. If so, move it to the highest priority.
         """
+        from learning_os.cpu import CPU  
+        curr_time = CPU.get_current_time()  
+
         for level in range(1, len(self.queues)):
             new_queue = deque()
             while self.queues[level]:
                 process = self.queues[level].popleft()
                 pid = process.pid
-                last_boost = self.process_last_boost.get(pid, 0)
-                # If the cumulative time ran has increased by at least boost_threshold since last boost,
-                # move the process to top priority.
-                if process.cumulative_time_ran - last_boost >= self.boost_threshold:
+                last_boost = self.process_last_boost.get(pid)
+                assert last_boost is not None, "Process should have a last boost time."
+
+                if curr_time - last_boost >= self.boost_threshold:
                     self.process_levels[pid] = 0
                     self.process_time_in_level[pid] = 0
-                    self.process_last_boost[pid] = process.cumulative_time_ran
+                    self.process_last_boost[pid] = curr_time
                     self.queues[0].append(process)
-                    print(f"Auto boost: Process {pid} boosted to top priority.")
+                    print(f"Auto boost: Process {pid} boosted to top priority at time {curr_time}.")
+                
                 else:
                     new_queue.append(process)
+
             self.queues[level] = new_queue
 
     def get_next_process(self) -> Process:

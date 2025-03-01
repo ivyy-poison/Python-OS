@@ -7,21 +7,23 @@ class CPU:
     A class to represent a CPU in an operating system. It will run processes
     in a loop until there are no processes left.
     """
+    global_clock = 0
 
     def __init__(self, scheduler: Scheduler, io_manager: IOManager) -> None:
         self.scheduler: Scheduler = scheduler
         self.io_manager: IOManager = io_manager
-        self.global_clock = 0
-
-    def increment_global_clock(self, time: int) -> None:
+        
+    @classmethod
+    def increment_global_clock(cls, time: int) -> None:
         """
         Simulate the passage of time by incrementing the global clock.
         
         Args:
         time (int): The amount of time to increment the clock by.
         """
-        self.global_clock += time
+        CPU.global_clock += time
 
+    @classmethod
     def get_current_time(self) -> int:
         """
         Get the current time of the simulation clock.

@@ -10,11 +10,11 @@ from learning_os.process import Process
 from learning_os.io_manager import IOManager
 
 def main():
-    scheduler = RoundRobinScheduler(quantum=3)
+    scheduler = RoundRobinScheduler()
     scheduler = SimpleScheduler()
-    scheduler = MultiLevelFeedbackQueueScheduler()
     scheduler = LotteryScheduler()
     scheduler = CompletelyFairScheduler()
+    scheduler = MultiLevelFeedbackQueueScheduler()
 
     io_manager = IOManager()
 

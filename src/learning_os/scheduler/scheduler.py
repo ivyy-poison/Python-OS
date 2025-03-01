@@ -41,7 +41,7 @@ class RoundRobinScheduler(Scheduler):
     allot a fixed time quantum to each process in the queue.
     """
 
-    def __init__(self, quantum: int) -> None:
+    def __init__(self, quantum: int = 3) -> None:
         self.quantum: int = quantum
         self.queue: Deque[Process] = deque()
 
