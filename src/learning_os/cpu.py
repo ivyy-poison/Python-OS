@@ -1,6 +1,6 @@
-from scheduler import Scheduler
-from process import Process, ProcessState
-from io_manager import IOManager
+from learning_os.scheduler import Scheduler
+from learning_os.process import Process, ProcessState
+from learning_os.io_manager import IOManager
 
 class CPU:
     """

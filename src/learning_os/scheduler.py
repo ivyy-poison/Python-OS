@@ -2,7 +2,7 @@ import abc
 import random
 from collections import deque
 from sortedcontainers import SortedDict
-from process import Process, ProcessState
+from learning_os.process import Process, ProcessState
 from typing import Dict, List, Deque, Tuple
 
 class Scheduler(abc.ABC):
