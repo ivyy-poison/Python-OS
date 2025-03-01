@@ -170,7 +170,11 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         """
         Search the queues starting from the highest priority level and return the first process found.
         """
+        ## Cleanup the existing scheduler ##
+        self.cleanup()
         self.auto_boost_processes()
+        ## Cleanup the existing scheduler ##
+
         for q in self.queues:
             if q:
                 return q.popleft()
@@ -198,6 +202,20 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
                 self.process_levels[pid] = current_level + 1
             # Reset its accumulated time at this new level.
             self.process_time_in_level[pid] = 0
+
+    def cleanup(self):
+        for level in range(len(self.queues)):
+            self.queues[level] = deque(
+                process for process in self.queues[level] if not process.is_terminated() 
+            )
+
+        for pid in list(self.process_levels.keys()):
+            process = Process.process_table.get(pid)
+            if process is None or process.is_terminated():
+                self.process_levels.pop(pid, None)
+                self.process_time_in_level.pop(pid, None)
+                self.process_previous_cumulative_runtime.pop(pid, None)
+                self.process_last_boost.pop(pid, None)
 
 class LotteryScheduler(Scheduler):
     """
@@ -245,6 +263,11 @@ class LotteryScheduler(Scheduler):
         """
         Perform a lottery draw to select the next process to run based on its ticket weight.
         """
+
+        ## Cleanup the existing scheduler ##
+        self.cleanup()
+        ## Cleanup the existing scheduler ##
+
         if not self.has_processes():
             raise Exception("No processes available")
         
@@ -263,6 +286,13 @@ class LotteryScheduler(Scheduler):
 
     def has_processes(self) -> bool:
         return len(self.processes) > 0
+    
+    def cleanup(self):
+        for pid in list(self.processes.keys()):
+            process = Process.process_table.get(pid)
+            if process is None or process.is_terminated():
+                self.processes.pop(pid, None)
+                self.total_tickets -= self.tickets.pop(pid, 0)
     
 class CompletelyFairScheduler(Scheduler):
     """
@@ -314,6 +344,10 @@ class CompletelyFairScheduler(Scheduler):
         """
         Retrieve and remove the process with the lowest virtual runtime.
         """
+        ## Cleanup the existing scheduler ##
+        self.cleanup()
+        ## Cleanup the existing scheduler ##
+        
         if not self.has_processes():
             raise Exception("No processes available")
         _, process = self.virtual_tree.popitem(0)
@@ -321,3 +355,17 @@ class CompletelyFairScheduler(Scheduler):
 
     def has_processes(self) -> bool:
         return len(self.virtual_tree) > 0
+    
+    def cleanup(self):
+        for (vruntime, pid) in list(self.virtual_tree.keys()):
+            process = Process.process_table.get(pid)
+            if process is None or process.is_terminated():
+                self.virtual_tree.pop((vruntime, pid), None)
+                self.id_to_vruntime.pop(pid, None)
+
+        for pid in list(self.id_to_vruntime.keys()):
+            process = Process.process_table.get(pid)
+            if process is None or process.is_terminated():
+                self.id_to_vruntime.pop(pid, None)
+    
+

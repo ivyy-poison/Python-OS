@@ -12,6 +12,7 @@ class Process:
     A class to represent a process in an operating system.
     """
     _next_pid: int = 1
+    process_table: dict[int, "Process"] = {} 
 
     def __increment_global_pid(self) -> None:
         """ Increment the global PID counter."""
@@ -32,6 +33,8 @@ class Process:
         self.cumulative_time_ran: int = 0
         self.io_probability: float = io_probability
         self.state: ProcessState = ProcessState.READY
+
+        Process.process_table[self.pid] = self
         self.__increment_global_pid()
 
     def run_for(self, time_slice: int) -> int:
@@ -84,6 +87,9 @@ class Process:
         """ Terminate the process."""
         assert self.state != ProcessState.TERMINATED, f"Process {self.pid} is already terminated."
         self.state = ProcessState.TERMINATED
+
+        if self.pid in Process.process_table:
+            del Process.process_table[self.pid]
 
     def is_terminated(self) -> bool:
         """
