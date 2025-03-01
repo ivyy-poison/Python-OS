@@ -1,15 +1,15 @@
-from cpu import CPU
-from scheduler import (
+from learning_os.cpu import CPU
+from learning_os.scheduler import (
     RoundRobinScheduler, 
     SimpleScheduler, 
     MultiLevelFeedbackQueueScheduler, 
     LotteryScheduler,
     CompletelyFairScheduler
 )
-from process import Process
-from io_manager import IOManager
+from learning_os.process import Process
+from learning_os.io_manager import IOManager
 
-if __name__ == "__main__":
+def main():
     scheduler = RoundRobinScheduler(quantum=3)
     scheduler = SimpleScheduler()
     scheduler = MultiLevelFeedbackQueueScheduler()
@@ -25,3 +25,4 @@ if __name__ == "__main__":
 
     cpu = CPU(scheduler, io_manager)
     cpu.run()
+    

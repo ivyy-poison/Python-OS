@@ -1,5 +1,5 @@
 import random
-from process import Process, ProcessState
+from learning_os.process import Process, ProcessState
 
 class IOManager:
     """
