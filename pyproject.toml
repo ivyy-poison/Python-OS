@@ -14,6 +14,8 @@ license = {text = "MIT"}
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
+[project.scripts]
+test-run = "learning_os.main:main"
 
 [tool.pdm]
 distribution = true

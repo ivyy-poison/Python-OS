@@ -1,4 +1,4 @@
-from learning_os.scheduler import Scheduler
+from learning_os.scheduler.scheduler import Scheduler
 from learning_os.process import Process, ProcessState
 from learning_os.io_manager import IOManager
 
