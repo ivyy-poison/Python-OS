@@ -6,8 +6,7 @@ from typing import List, Dict, Tuple, Any
 from learning_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
 
 DEFAULT_TOTAL_BLOCKS = 128
-DEFAULT_BLOCK_SIZE = 4096
-DEFAULT_INODE_SIZE = 256
+DEFAULT_BLOCK_SIZE = 10
 DEFAULT_TOTAL_INODES = 16
 
 class BasicFileSystem:
@@ -18,6 +17,16 @@ class BasicFileSystem:
             self.__initialize_storage()
 
         self.storage = self.__read_storage()
+        
+        superblock = self.__get_superblock()
+
+        self.block_size = superblock["block_size"]
+        self.total_blocks = superblock["total_blocks"]
+        self.max_inode_count = superblock["max_inode_count"]
+        self.inode_bitmap_block = superblock["inode_bitmap_block"]
+        self.data_bitmap_block = superblock["data_bitmap_block"]
+        self.inode_start = superblock["inode_start"]
+        self.data_start = superblock["data_start"]
 
     def __initialize_storage(self):
         super_block = {
@@ -31,16 +40,17 @@ class BasicFileSystem:
         }
 
         storage_data = {
-            "0": super_block,
-            "1": [False] * DEFAULT_TOTAL_INODES,
-            "2": [False] * DEFAULT_TOTAL_BLOCKS,
-            "3": {},
+            0: super_block,
+            1: [False] * DEFAULT_TOTAL_INODES,
+            2: [False] * DEFAULT_TOTAL_BLOCKS,
+            3: {},
         }
 
+        ## Creation of the root inode
         root_inode = DirectoryInode(0)
-
-        storage_data["3"]["0"] = root_inode.to_dict()
-        storage_data["1"][0] = True
+        storage_data[3][0] = root_inode.to_dict()
+        storage_data[1][0] = True
+        ## Creation of the root inode
 
         # Persist the storage data as JSON.
         with open(self.storage_path, "w") as storage:
@@ -61,10 +71,10 @@ class BasicFileSystem:
             os.fsync(storage.fileno())
 
     def __get_inode_bitmap(self) -> List[bool]:
-        if "1" not in self.storage:
-            raise Exception("Inode bitmap (key '1') not found in storage!")
+        if self.inode_bitmap_block not in self.storage:
+            raise Exception(f"Inode bitmap (key {self.inode_bitmap_block}) not found in storage!")
         
-        return self.storage["1"]
+        return self.storage[self.inode_bitmap_block]
 
     def __allocate_inode_from_bitmap(self) -> int:
         """
@@ -72,7 +82,7 @@ class BasicFileSystem:
         Returns the inode number.
         """
         inode_bitmap: List[bool] = self.__get_inode_bitmap()
-        for i in range(len(inode_bitmap)):
+        for i in range(self.max_inode_count):
             if not inode_bitmap[i]:
                 inode_bitmap[i] = True
                 return i
@@ -90,16 +100,17 @@ class BasicFileSystem:
         inode_bitmap[inode_num] = False
      
     def __get_superblock(self) -> Dict[str, Any]:
-        if "0" not in self.storage:
+        SUPERBLOCK = 0
+        if SUPERBLOCK not in self.storage:
             raise Exception("Superblock (key '0') not found in storage!")
         
-        return self.storage["0"]
+        return self.storage[SUPERBLOCK]
     
     def __get_data_bitmap(self) -> List[bool]:
-        if "2" not in self.storage:
-            raise Exception("Data bitmap (key '2') not found in storage!")
+        if self.data_bitmap_block not in self.storage:
+            raise Exception(f"Data bitmap (key {self.data_bitmap_block}) not found in storage!")
         
-        return self.storage["2"]
+        return self.storage[self.data_bitmap_block]
     
     def __allocate_block_from_bitmap(self) -> int:
         """
@@ -107,7 +118,7 @@ class BasicFileSystem:
         Returns the block number.
         """
         data_bitmap: List[bool] = self.__get_data_bitmap()
-        for i in range(len(data_bitmap)):
+        for i in range(self.total_blocks):
             if not data_bitmap[i]:
                 data_bitmap[i] = True
                 return i
@@ -125,18 +136,19 @@ class BasicFileSystem:
         data_bitmap[block_num] = False
 
     def __get_inode_table(self) -> Dict[str, Any]:
-        if "3" not in self.storage:
-            raise Exception("Inode table (key '3') not found in storage!")
+        if self.inode_start not in self.storage:
+            raise Exception(f"Inode table (key f{self.inode_start}) not found in storage!")
         
-        return self.storage["3"]
+        return self.storage[self.inode_start]
 
     def __get_inode(self, path: List[str]) -> Inode:
         """
         Traverse the inode table to find the inode corresponding to the given path.
         """
+        ROOT_BLOCK = 0
         inode_table = self.__get_inode_table()
-        current_inode_num = 0
-        current_inode = inode_table.get(str(current_inode_num))
+        current_inode_num = ROOT_BLOCK
+        current_inode = inode_table.get(current_inode_num)
         
         for part in path:
             if current_inode is None:
@@ -145,7 +157,7 @@ class BasicFileSystem:
             if part not in entries:
                 raise Exception(f"Parent directory '{part}' does not exist!")
             current_inode_num = entries[part]
-            current_inode = inode_table.get(str(current_inode_num))
+            current_inode = inode_table.get(current_inode_num)
             if current_inode is None:
                 raise Exception(f"Inode {current_inode_num} not found in inode table!")
 
@@ -156,7 +168,7 @@ class BasicFileSystem:
         Retrieve an inode by its number from the inode table.
         """
         inode_table = self.__get_inode_table()
-        inode_data = inode_table.get(str(inode_num))
+        inode_data = inode_table.get(inode_num)
         if inode_data is None:
             raise Exception(f"Inode {inode_num} not found in inode table!")
         return Inode.from_dict(inode_data)
@@ -166,15 +178,15 @@ class BasicFileSystem:
         Update the inode table with the given inode.
         """
         inode_table = self.__get_inode_table()
-        inode_table[str(inode.inode_number)] = inode.to_dict()
+        inode_table[inode.inode_number] = inode.to_dict()
 
     def __delete_inode_from_table(self, inode_num: int) -> None:
         """
         Delete an inode from the inode table.
         """
         inode_table = self.__get_inode_table()
-        if str(inode_num) in inode_table:
-            del inode_table[str(inode_num)]
+        if inode_num in inode_table:
+            del inode_table[inode_num]
         else:
             raise Exception(f"Inode {inode_num} not found in inode table!")
 
@@ -290,7 +302,7 @@ class BasicFileSystem:
         """
         superblock = self.__get_superblock()
         data_start = superblock["data_start"]
-        self.storage[str(block_num + data_start)] = data
+        self.storage[block_num + data_start] = data
 
     def __read_from_data_block(self, block_num: int) -> str:
         """
@@ -298,7 +310,7 @@ class BasicFileSystem:
         """
         superblock = self.__get_superblock()
         data_start = superblock["data_start"]
-        return self.storage.get(str(block_num + data_start), "")
+        return self.storage.get(block_num + data_start, "")
     
     def __free_data_block(self, block_num: int) -> None:
         """
@@ -306,7 +318,7 @@ class BasicFileSystem:
         """
         superblock = self.__get_superblock()
         data_start = superblock["data_start"]
-        del self.storage[str(block_num + data_start)]
+        del self.storage[block_num + data_start]
 
     def write_to_file(self, file_path: str, data: str) -> None:
         
@@ -329,7 +341,7 @@ class BasicFileSystem:
             raise Exception(f"'{file_path}' is not a regular file!")
     
         # Allocate blocks for the data.
-        total_blocks_needed = math.ceil(len(data) / 10)
+        total_blocks_needed = math.ceil(len(data) / self.block_size)
         blocks_to_allocate = []
     
         for _ in range(total_blocks_needed):
@@ -338,8 +350,8 @@ class BasicFileSystem:
     
         # Write data to the allocated blocks.
         for i, block_num in enumerate(blocks_to_allocate):
-            start = i * 10
-            end = start + 10
+            start = i * self.block_size
+            end = start + self.block_size
             file_inode.data[block_num] = block_num
             data_chunk = data[start:end]
             self.__write_to_data_block(block_num, data_chunk)
