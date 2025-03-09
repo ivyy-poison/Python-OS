@@ -1,8 +1,7 @@
-from learning_os.process import Process, ProcessState
+from learning_os.process import Process
 from learning_os.scheduler import Scheduler
 
 from sortedcontainers import SortedDict
-from learning_os.process import Process, ProcessState
 from typing import Dict, Tuple
 
 class CompletelyFairScheduler(Scheduler):
@@ -24,7 +23,7 @@ class CompletelyFairScheduler(Scheduler):
         self.base_quantum = base_quantum
         self.min_quantum = min_quantum
 
-        self.virtual_tree: SortedDict = SortedDict()
+        self.virtual_tree: Dict[Tuple[int, int], Process] = SortedDict()
         self.id_to_vruntime: Dict[int, int] = {}
     
     def get_alloted_time(self, process: Process) -> int:
@@ -48,7 +47,7 @@ class CompletelyFairScheduler(Scheduler):
         else:
             self.id_to_vruntime[process.pid] = process.cumulative_time_ran
         
-        key: Tuple[int, int] = (self.id_to_vruntime[process.pid], process.pid)
+        key = (self.id_to_vruntime[process.pid], process.pid)
         self.virtual_tree[key] = process
 
     def get_next_process(self) -> Process:

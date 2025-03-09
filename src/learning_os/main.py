@@ -8,6 +8,7 @@ from learning_os.scheduler import (
 )
 from learning_os.process import Process
 from learning_os.io_manager import IOManager
+from learning_os.file_system import BasicFileSystem
 
 def main():
     scheduler = RoundRobinScheduler()
@@ -25,4 +26,17 @@ def main():
 
     cpu = CPU(scheduler, io_manager)
     cpu.run()
+
+def main():
+    fs = BasicFileSystem("storage.json")
+    fs.create_directory("/dir1")
+    fs.create_directory("/dir1/dir2")
+    fs.create_directory("/dir2")
+    fs.create_file("/dir1/file1.txt")
+    fs.create_file("/file2.txt")
+    fs.write_to_file("/dir1/file1.txt", "abcdefghijklmnopqrstuvwxyz")
+    fs.delete_file("/dir1/file1.txt")
+    # fs.delete_file("/dir1/file1.txt")
+    # fs.delete_directory("/dir2")
+    # fs.delete_directory("/dir1")
     

@@ -33,9 +33,9 @@ All schedulers in my existing OS model inherits from the `Scheduler` abstract ba
 3. **Multi-Level Feedback Queue (MLFQ) Scheduler**
     - **Description**: The MLFQ scheduler uses multiple queues with different priority levels. Processes start at the highest priority level and are demoted to lower levels if they use up their time quantum without completing or yielding control of the CPU. This allows the scheduler to prioritise short processes that do not hog the CPU over long-running processes.
 
-    As described in OStep, measures have also been implemented to avoid allowing certain short-running process from "gaming the system" by repeatedly yielding control right before a time quantum expires. I implemented this by tracking the cumulative time a process has spent at each level. If a process has spent more than a certain threshold time at a level, it is demoted to the next lower level.
+    - As described in OStep, measures have also been implemented to avoid allowing certain short-running process from "gaming the system" by repeatedly yielding control right before a time quantum expires. I implemented this by tracking the cumulative time a process has spent at each level. If a process has spent more than a certain threshold time at a level, it is demoted to the next lower level.
 
-    In addition, to avoid starvation of long running process as a result of a repeated continuous addition of short running process that are preferrentially scheduled, I implemented a mechanism to periodically promote long running processes that have been waiting in the lower levels of the queue for a long time.
+    - In addition, to avoid starvation of long running process as a result of a repeated continuous addition of short running process that are preferrentially scheduled, I implemented a mechanism to periodically promote long running processes that have been waiting in the lower levels of the queue for a long time.
 
     - **Implementation**: In our implementation, the `MultiLevelFeedbackQueueScheduler` class maintains multiple queues and tracks the time each process spends at each level.
 
