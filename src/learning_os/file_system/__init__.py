@@ -1,1 +1,2 @@
-from .file_system import FileSystem, BasicFileSystem
+from .file_system import FileSystem
+from .basic_fs import BasicFileSystem

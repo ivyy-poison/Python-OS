@@ -3,8 +3,7 @@ import random
 from learning_os.process import Process, ProcessState
 from learning_os.scheduler import Scheduler
 
-from collections import deque
-from typing import Dict, List, Deque
+from typing import Dict
 
 class LotteryScheduler(Scheduler):
     """
