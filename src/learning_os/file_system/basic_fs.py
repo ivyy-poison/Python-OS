@@ -2,7 +2,7 @@ import os
 import json
 import time
 from typing import List, Dict, Tuple, Any
-from learning_os.file_system.inode import DirectoryInode, RegularFileInode
+from learning_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
 
 DEFAULT_TOTAL_BLOCKS = 128
 DEFAULT_BLOCK_SIZE = 4096
@@ -34,13 +34,11 @@ class BasicFileSystem:
             "1": [False] * DEFAULT_TOTAL_INODES,
             "2": [False] * DEFAULT_TOTAL_BLOCKS,
             "3": {},
-            "4": {}
         }
 
         root_inode = DirectoryInode(0)
-        # Store root inode in inode table (as key "0")
+
         storage_data["3"]["0"] = root_inode.to_dict()
-        # Mark inode 0 as used
         storage_data["1"][0] = True
 
         # Persist the storage data as JSON.
@@ -51,7 +49,7 @@ class BasicFileSystem:
             
         print("Storage initialized and root directory (inode 0) created.")    
 
-    def __allocate_inode(self) -> int:
+    def __allocate_inode_from_table(self) -> int:
         """
         Allocates a free inode from the inode bitmap.
         Returns the inode number.
@@ -92,12 +90,6 @@ class BasicFileSystem:
         
         return self.storage["3"]
 
-    def __get_data_table(self) -> Dict[str, Any]:
-        if "4" not in self.storage:
-            raise Exception("Data table (key '4') not found in storage!")
-        
-        return self.storage["4"]
-
     def __persist_storage(self) -> None:
         with open(self.storage_path, "w") as storage:
             json.dump(self.storage, storage, indent=4)
@@ -116,7 +108,7 @@ class BasicFileSystem:
         new_dir_name = parts[-1]
         return (parent_dir, new_dir_name)
 
-    def __get_inode(self, path: List[str]) -> int:
+    def __get_inode(self, path: List[str]) -> Inode:
         """
         Traverse the inode table to find the inode corresponding to the given path.
         """
@@ -134,7 +126,15 @@ class BasicFileSystem:
             current_inode = inode_table.get(str(current_inode_num))
             if current_inode is None:
                 raise Exception(f"Inode {current_inode_num} not found in inode table!")
-        return current_inode_num
+
+        return Inode.from_dict(current_inode)
+    
+    def __update_inode_table(self, inode: Inode) -> None:
+        """
+        Update the inode table with the given inode.
+        """
+        inode_table = self.__get_inode_table()
+        inode_table[str(inode.inode_number)] = inode.to_dict()
 
     def __create_inode(self, path: str, inode_type: str) -> None:
         """
@@ -145,20 +145,15 @@ class BasicFileSystem:
         update the parent directory's entries, and persist the changes.
         """
         parent_dir, new_name = self.__parse_path(path)
+        parent_inode: Inode = self.__get_inode(parent_dir)
+        
+        assert isinstance(parent_inode, DirectoryInode), "Parent inode must be a directory"
 
-        inode_table = self.__get_inode_table()
-
-        parent_inode_num = self.__get_inode(parent_dir)
-
-        # Check if new inode already exists in parent.
-        parent_inode = inode_table.get(str(parent_inode_num))
-        if new_name in parent_inode.get("entries", {}):
+        if new_name in parent_inode.entries:
             return
 
-        # Find first available inode from the inode bitmap.
-        free_inode_num = self.__allocate_inode()
-
         # Create the new inode.
+        free_inode_num = self.__allocate_inode_from_table()
         if inode_type == "directory":
             new_inode = DirectoryInode(free_inode_num)
         elif inode_type == "file":
@@ -166,13 +161,11 @@ class BasicFileSystem:
         else:
             raise Exception("Invalid inode type")
 
-        inode_table[str(free_inode_num)] = new_inode.to_dict()
+        self.__update_inode_table(new_inode)
 
-        # Update parent's directory entries.
-        parent_inode.setdefault("entries", {})[new_name] = free_inode_num
-        parent_inode["modified_at"] = time.time()
+        parent_inode.entries[new_name] = free_inode_num
+        parent_inode.modified_at = time.time()
 
-        # Persist changes back to storage.
         self.__persist_storage()
         print(f"{inode_type.capitalize()} '{path}' created with inode {free_inode_num}.")
 

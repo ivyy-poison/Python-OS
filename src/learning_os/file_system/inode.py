@@ -14,6 +14,18 @@ class Inode(abc.ABC):
         """Convert the inode metadata to a dictionary."""
         pass
 
+    @classmethod
+    @abc.abstractmethod
+    def from_dict(self, data: Dict[str, Any]) -> "Inode":
+        """Load the inode metadata from a dictionary."""
+        file_type = data.get("file_type")
+        if file_type == "directory":
+            return DirectoryInode.from_dict(data)    
+        elif file_type == "file":
+            return RegularFileInode.from_dict(data)
+    
+        raise ValueError(f"Unknown file type: {file_type}")
+
 class DirectoryInode(Inode):
     def __init__(self, inode_number: int):
         super().__init__(inode_number, "directory")
@@ -28,6 +40,16 @@ class DirectoryInode(Inode):
             "modified_at": self.modified_at,
             "entries": self.entries,
         }
+    
+    @classmethod
+    def from_dict(self, data: Dict[str, Any]) -> "DirectoryInode":
+        """Load the inode metadata from a dictionary."""
+        inode = DirectoryInode(inode_number=data["inode_number"])
+        inode.file_type = data["file_type"]
+        inode.created_at = data["created_at"]
+        inode.modified_at = data["modified_at"]
+        inode.entries = data["entries"]
+        return inode
 
 class RegularFileInode(Inode):
     def __init__(self, inode_number: int):
@@ -44,3 +66,15 @@ class RegularFileInode(Inode):
             "data": self.data,
             "size": self.size,
         }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RegularFileInode":
+        """Load the inode metadata from a dictionary."""
+        inode = RegularFileInode(inode_number=data["inode_number"])
+        inode.file_type = data["file_type"]
+        inode.created_at = data["created_at"]
+        inode.modified_at = data["modified_at"]
+        inode.data = data["data"]
+        inode.size = data["size"]
+
+        return inode
