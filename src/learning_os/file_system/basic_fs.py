@@ -1,8 +1,7 @@
 import os
 import json
-import ijson
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Tuple, Any
 from learning_os.file_system.inode import DirectoryInode, RegularFileInode
 
 DEFAULT_TOTAL_BLOCKS = 128
@@ -51,6 +50,19 @@ class BasicFileSystem:
             os.fsync(storage.fileno())
             
         print("Storage initialized and root directory (inode 0) created.")    
+
+    def __allocate_inode(self) -> int:
+        """
+        Allocates a free inode from the inode bitmap.
+        Returns the inode number.
+        """
+        inode_bitmap: List[bool] = self.__get_inode_bitmap()
+        for i in range(len(inode_bitmap)):
+            if not inode_bitmap[i]:
+                inode_bitmap[i] = True
+                self.__persist_storage()
+                return i
+        raise Exception("No free inodes available!")
     
     def __read_storage(self) -> Dict[str, Any]:
         with open(self.storage_path, "r") as storage:
@@ -93,14 +105,36 @@ class BasicFileSystem:
             os.fsync(storage.fileno())
 
     @staticmethod
-    def __parse_path(path: str) -> List[str]:
+    def __parse_path(path: str) -> Tuple[List, str]:
         if not path.startswith("/"):
             raise Exception("Path must be absolute and start with '/'")
         parts = path.strip("/").split("/")
         if not parts or parts[0] == "":
             raise Exception("Invalid path")
-        return parts
+        
+        parent_dir = parts[:-1]
+        new_dir_name = parts[-1]
+        return (parent_dir, new_dir_name)
 
+    def __get_inode(self, path: List[str]) -> int:
+        """
+        Traverse the inode table to find the inode corresponding to the given path.
+        """
+        inode_table = self.__get_inode_table()
+        current_inode_num = 0
+        current_inode = inode_table.get(str(current_inode_num))
+        
+        for part in path:
+            if current_inode is None:
+                raise Exception(f"Parent directory '{part}' does not exist!")
+            entries = current_inode.get("entries", {})
+            if part not in entries:
+                raise Exception(f"Parent directory '{part}' does not exist!")
+            current_inode_num = entries[part]
+            current_inode = inode_table.get(str(current_inode_num))
+            if current_inode is None:
+                raise Exception(f"Inode {current_inode_num} not found in inode table!")
+        return current_inode_num
 
     def create_directory(self, path: str) -> None:
         """
@@ -110,34 +144,11 @@ class BasicFileSystem:
         create a directory inode, add it to the inode table,
         update the parent directory's entries, and persist the changes.
         """
-
-        parts = self.__parse_path(path)
+        parent_dir, new_dir_name = self.__parse_path(path)
 
         inode_table = self.__get_inode_table()
 
-        # Find the parent directory inode.
-        # If creating "/dir", the parent is root (inode 0)
-        if len(parts) == 1:
-            parent_inode_num = 0
-            new_dir_name = parts[0]
-        else:
-            new_dir_name = parts[-1]
-            # Traverse path parts to find parent's inode number.
-            current_inode = inode_table.get("0")
-            if current_inode is None:
-                raise Exception("Root directory not found in inode table!")
-            parent_inode_num = 0
-            for part in parts[:-1]:
-                # current_inode should be a directory.
-                if current_inode["file_type"] != "directory":
-                    raise Exception(f"Inode {parent_inode_num} is not a directory!")
-                entries = current_inode.get("entries", {})
-                if part not in entries:
-                    raise Exception(f"Parent directory '{part}' does not exist!")
-                parent_inode_num = entries[part]
-                current_inode = inode_table.get(str(parent_inode_num))
-                if current_inode is None:
-                    raise Exception(f"Inode {parent_inode_num} not found in inode table!")
+        parent_inode_num = self.__get_inode(parent_dir)
 
         # Check if new directory already exists in parent.
         parent_inode = inode_table.get(str(parent_inode_num))
@@ -145,17 +156,7 @@ class BasicFileSystem:
             return
 
         # Find first available inode from the inode bitmap.
-        inode_bitmap: List[bool] = self.__get_inode_bitmap()
-        free_inode_num = None
-        for i in range(len(inode_bitmap)):
-            if not inode_bitmap[i]:
-                free_inode_num = i
-                break
-        if free_inode_num is None:
-            raise Exception("No free inodes available!")
-
-        # Mark inode as used.
-        inode_bitmap[free_inode_num] = True
+        free_inode_num = self.__allocate_inode()
 
         # Create the new directory inode.
         new_dir_inode = DirectoryInode(free_inode_num)
@@ -177,39 +178,14 @@ class BasicFileSystem:
         create a regular file inode, add it to the inode table,
         update the parent directory's entries, and persist the changes.
         """
-        # For simplicity, assume paths are like "/file" or "/parent/child"
-        if not path.startswith("/"):
-            raise Exception("Path must be absolute and start with '/'")
-        parts = path.strip("/").split("/")
-        if not parts or parts[0] == "":
-            raise Exception("Invalid path")
+        parent_dir, new_file_name = self.__parse_path(path)
 
         # Read entire storage so we can update it.
         inode_table: Dict[str, Any] = self.__get_inode_table()
 
         # Find the parent directory inode.
         # If creating "/file", the parent is root (inode 0)
-        if len(parts) == 1:
-            parent_inode_num = 0
-            new_file_name = parts[0]
-        else:
-            new_file_name = parts[-1]
-            # Traverse path parts to find parent's inode number.
-            current_inode = inode_table.get("0")
-            if current_inode is None:
-                raise Exception("Root directory not found in inode table!")
-            parent_inode_num = 0
-            for part in parts[:-1]:
-                # current_inode should be a directory.
-                if current_inode["file_type"] != "directory":
-                    raise Exception(f"Inode {parent_inode_num} is not a directory!")
-                entries = current_inode.get("entries", {})
-                if part not in entries:
-                    raise Exception(f"Parent directory '{part}' does not exist!")
-                parent_inode_num = entries[part]
-                current_inode = inode_table.get(str(parent_inode_num))
-                if current_inode is None:
-                    raise Exception(f"Inode {parent_inode_num} not found in inode table!")
+        parent_inode_num = self.__get_inode(parent_dir)
 
         # Check if new file already exists in parent.
         parent_inode = inode_table.get(str(parent_inode_num))
@@ -217,17 +193,8 @@ class BasicFileSystem:
             return
 
         # Find first available inode from the inode bitmap.
-        inode_bitmap: List[bool] = self.__get_inode_bitmap()
-        free_inode_num = None
-        for i in range(len(inode_bitmap)):
-            if not inode_bitmap[i]:
-                free_inode_num = i
-                break
-        if free_inode_num is None:
-            raise Exception("No free inodes available!")
-        
-        # Mark inode as used.
-        inode_bitmap[free_inode_num] = True
+        free_inode_num = self.__allocate_inode()
+
         # Create the new file inode.
         new_file_inode = RegularFileInode(free_inode_num)
 
