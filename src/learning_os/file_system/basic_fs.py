@@ -17,7 +17,6 @@ class BasicFileSystem:
         if not os.path.exists(storage_path):
             self.__initialize_storage()
 
-        self.superblock = self.__load_superblock()
         self.storage = self.__read_storage()
 
     def __initialize_storage(self):
@@ -51,48 +50,45 @@ class BasicFileSystem:
             storage.flush()
             os.fsync(storage.fileno())
             
-        print("Storage initialized and root directory (inode 0) created.")
-
-        with open(self.storage_path, "w") as storage:
-            json.dump(storage_data, storage, indent=4)
-            storage.flush()
-            os.fsync(storage.fileno())
-
-    def __load_superblock(self):
-        with open(self.storage_path, "r") as storage:
-            try:
-                superblock_gen = ijson.items(storage, "0")
-                superblock = next(superblock_gen)
-                return superblock
-            except StopIteration:
-                raise Exception("Superblock (key '0') not found in storage!")
-            
-    def __load_inode_bitmap(self) -> List[bool]:
-        with open(self.storage_path, "r") as storage:
-            try:
-                inode_bitmap_gen = ijson.items(storage, "1")
-                inode_bitmap = next(inode_bitmap_gen)
-                return inode_bitmap
-            except StopIteration:
-                raise Exception("Inode bitmap (key '1') not found in storage!")
-        
-    def __load_data_bitmap(self) -> List[bool]:
-        with open(self.storage_path, "r") as storage:
-            try:
-                data_bitmap_gen = ijson.items(storage, "2")
-                data_bitmap = next(data_bitmap_gen)
-                return data_bitmap
-            except StopIteration:
-                raise Exception("Data bitmap (key '2') not found in storage!")
-            
+        print("Storage initialized and root directory (inode 0) created.")    
     
     def __read_storage(self) -> Dict[str, Any]:
         with open(self.storage_path, "r") as storage:
             return json.load(storage)
+        
+    def __get_superblock(self) -> Dict[str, Any]:
+        if "0" not in self.storage:
+            raise Exception("Superblock (key '0') not found in storage!")
+        
+        return self.storage["0"]
+    
+    def __get_inode_bitmap(self) -> List[bool]:
+        if "1" not in self.storage:
+            raise Exception("Inode bitmap (key '1') not found in storage!")
+        
+        return self.storage["1"]
+    
+    def __get_data_bitmap(self) -> List[bool]:
+        if "2" not in self.storage:
+            raise Exception("Data bitmap (key '2') not found in storage!")
+        
+        return self.storage["2"]
+    
+    def __get_inode_table(self) -> Dict[str, Any]:
+        if "3" not in self.storage:
+            raise Exception("Inode table (key '3') not found in storage!")
+        
+        return self.storage["3"]
 
-    def __persist_storage(self, storage_data: Dict[str, Any]) -> None:
+    def __get_data_table(self) -> Dict[str, Any]:
+        if "4" not in self.storage:
+            raise Exception("Data table (key '4') not found in storage!")
+        
+        return self.storage["4"]
+
+    def __persist_storage(self) -> None:
         with open(self.storage_path, "w") as storage:
-            json.dump(storage_data, storage, indent=4)
+            json.dump(self.storage, storage, indent=4)
             storage.flush()
             os.fsync(storage.fileno())
 
@@ -117,10 +113,7 @@ class BasicFileSystem:
 
         parts = self.__parse_path(path)
 
-        # Read entire storage so we can update it.
-        storage_data = self.__read_storage()
-    
-        inode_table: Dict[str, Any] = storage_data.get("3", {})
+        inode_table = self.__get_inode_table()
 
         # Find the parent directory inode.
         # If creating "/dir", the parent is root (inode 0)
@@ -152,7 +145,7 @@ class BasicFileSystem:
             return
 
         # Find first available inode from the inode bitmap.
-        inode_bitmap: List[bool] = storage_data["1"]
+        inode_bitmap: List[bool] = self.__get_inode_bitmap()
         free_inode_num = None
         for i in range(len(inode_bitmap)):
             if not inode_bitmap[i]:
@@ -173,10 +166,7 @@ class BasicFileSystem:
         parent_inode["modified_at"] = time.time()
 
         # Persist changes back to storage.
-        storage_data["1"] = inode_bitmap  # update bitmap
-        storage_data["3"] = inode_table     # update inode table
-
-        self.__persist_storage(storage_data)
+        self.__persist_storage()
         print(f"Directory '{path}' created with inode {free_inode_num}.")
 
     def create_file(self, path: str) -> None:
@@ -195,8 +185,7 @@ class BasicFileSystem:
             raise Exception("Invalid path")
 
         # Read entire storage so we can update it.
-        storage_data = self.__read_storage()
-        inode_table: Dict[str, Any] = storage_data.get("3", {})
+        inode_table: Dict[str, Any] = self.__get_inode_table()
 
         # Find the parent directory inode.
         # If creating "/file", the parent is root (inode 0)
@@ -228,7 +217,7 @@ class BasicFileSystem:
             return
 
         # Find first available inode from the inode bitmap.
-        inode_bitmap: List[bool] = storage_data["1"]
+        inode_bitmap: List[bool] = self.__get_inode_bitmap()
         free_inode_num = None
         for i in range(len(inode_bitmap)):
             if not inode_bitmap[i]:
@@ -248,7 +237,5 @@ class BasicFileSystem:
         parent_inode["modified_at"] = time.time()
 
         # Persist changes back to storage.
-        storage_data["1"] = inode_bitmap
-        storage_data["3"] = inode_table
-        self.__persist_storage(storage_data)
+        self.__persist_storage()
         print(f"File '{path}' created with inode {free_inode_num}.")
