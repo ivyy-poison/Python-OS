@@ -4,12 +4,13 @@ import math
 import time
 from typing import List, Dict, Tuple, Any
 from learning_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
+from learning_os.file_system import FileSystem
 
 DEFAULT_TOTAL_BLOCKS = 128
 DEFAULT_BLOCK_SIZE = 10
 DEFAULT_TOTAL_INODES = 16
 
-class BasicFileSystem:
+class BasicFileSystem(FileSystem):
     def __init__(self, storage_path: str):
         self.storage_path = storage_path
 
@@ -52,7 +53,7 @@ class BasicFileSystem:
 
         ## Creation of the root inode
         root_inode = DirectoryInode(0)
-        storage_data[3][0] = root_inode.to_dict()
+        storage_data[3]["0"] = root_inode.to_dict()
         storage_data[1][0] = True
         ## Creation of the root inode
 
@@ -89,10 +90,10 @@ class BasicFileSystem:
         The inode bitmap is a list of booleans where each index represents an inode.
         If the inode is allocated, the value is True; otherwise, it is False.
         """
-        if self.inode_bitmap_block not in self.storage:
+        if str(self.inode_bitmap_block) not in self.storage:
             raise Exception(f"Inode bitmap (key {self.inode_bitmap_block}) not found in storage!")
         
-        return self.storage[self.inode_bitmap_block]
+        return self.storage[str(self.inode_bitmap_block)]
 
     def __allocate_inode_from_bitmap(self) -> int:
         """
@@ -142,10 +143,10 @@ class BasicFileSystem:
         Exception: If the superblock is not found in the storage.
         """
         SUPERBLOCK = 0
-        if SUPERBLOCK not in self.storage:
+        if str(SUPERBLOCK) not in self.storage:
             raise Exception("Superblock (key '0') not found in storage!")
         
-        return self.storage[SUPERBLOCK]
+        return self.storage[str(SUPERBLOCK)]
     
     def __get_data_bitmap(self) -> List[bool]:
         """
@@ -157,10 +158,10 @@ class BasicFileSystem:
         Returns:
         List[bool]: The data bitmap.
         """
-        if self.data_bitmap_block not in self.storage:
+        if str(self.data_bitmap_block) not in self.storage:
             raise Exception(f"Data bitmap (key {self.data_bitmap_block}) not found in storage!")
         
-        return self.storage[self.data_bitmap_block]
+        return self.storage[str(self.data_bitmap_block)]
     
     def __allocate_block_from_bitmap(self) -> int:
         """
@@ -207,10 +208,10 @@ class BasicFileSystem:
         
         Raises:
         Exception: If the inode table is not found in the storage."""
-        if self.inode_start not in self.storage:
+        if str(self.inode_start) not in self.storage:
             raise Exception(f"Inode table (key f{self.inode_start}) not found in storage!")
         
-        return self.storage[self.inode_start]
+        return self.storage[str(self.inode_start)]
 
     def __get_inode(self, path: List[str]) -> Inode:
         """
@@ -228,7 +229,7 @@ class BasicFileSystem:
         ROOT_BLOCK = 0
         inode_table = self.__get_inode_table()
         current_inode_num = ROOT_BLOCK
-        current_inode = inode_table.get(current_inode_num)
+        current_inode = inode_table.get(str(current_inode_num))
         
         for part in path:
             if current_inode is None:
@@ -237,7 +238,7 @@ class BasicFileSystem:
             if part not in entries:
                 raise Exception(f"Parent directory '{part}' does not exist!")
             current_inode_num = entries[part]
-            current_inode = inode_table.get(current_inode_num)
+            current_inode = inode_table.get(str(current_inode_num))
             if current_inode is None:
                 raise Exception(f"Inode {current_inode_num} not found in inode table!")
 
@@ -257,7 +258,7 @@ class BasicFileSystem:
         Exception: If the inode number is invalid or if the inode does not exist.
         """
         inode_table = self.__get_inode_table()
-        inode_data = inode_table.get(inode_num)
+        inode_data = inode_table.get(str(inode_num))
         if inode_data is None:
             raise Exception(f"Inode {inode_num} not found in inode table!")
         return Inode.from_dict(inode_data)
@@ -270,7 +271,7 @@ class BasicFileSystem:
         inode (Inode): The inode object to update.
         """
         inode_table = self.__get_inode_table()
-        inode_table[inode.inode_number] = inode.to_dict()
+        inode_table[str(inode.inode_number)] = inode.to_dict()
 
     def __delete_inode_from_table(self, inode_num: int) -> None:
         """
@@ -283,8 +284,8 @@ class BasicFileSystem:
         Exception: If the inode number is invalid or if the inode does not exist.
         """
         inode_table = self.__get_inode_table()
-        if inode_num in inode_table:
-            del inode_table[inode_num]
+        if str(inode_num) in inode_table:
+            del inode_table[str(inode_num)]
         else:
             raise Exception(f"Inode {inode_num} not found in inode table!")
 
@@ -451,7 +452,7 @@ class BasicFileSystem:
         """
         superblock = self.__get_superblock()
         data_start = superblock["data_start"]
-        self.storage[block_num + data_start] = data
+        self.storage[str(block_num + data_start)] = data
 
     def __read_from_data_block(self, block_num: int) -> str:
         """
@@ -465,7 +466,7 @@ class BasicFileSystem:
         """
         superblock = self.__get_superblock()
         data_start = superblock["data_start"]
-        return self.storage.get(block_num + data_start, "")
+        return self.storage.get(str(block_num + data_start), "")
     
     def __free_data_block(self, block_num: int) -> None:
         """
@@ -478,7 +479,7 @@ class BasicFileSystem:
         data_start = superblock["data_start"]
         del self.storage[block_num + data_start]
 
-    def write_to_file(self, file_path: str, data: str) -> None:
+    def write_file(self, file_path: str, data: str) -> None:
         """
         Write data to a file at the specified path.
         If the file doesn't exist, throw an exception.
@@ -526,3 +527,77 @@ class BasicFileSystem:
         # Update the inode table and persist changes.
         self.__update_inode_table(file_inode)
         self.__persist_storage()
+
+    def read_file(self, file_path: str, offset: int, size: int) -> str:
+        """
+        Read data from a file at the specified path.
+        If the file doesn't exist, throw an exception.
+        Otherwise, read the data from the allocated blocks.
+
+        Args:
+        file_path (str): The absolute path of the file to read from.
+        offset (int): The byte offset to start reading from.
+        size (int): The number of bytes to read.
+
+        Returns:
+        str: The data read from the file.
+
+        Raises:
+        Exception: If the file doesn't exist or if the inode type is invalid.
+        """
+        parent_dir, name = self.__parse_path(file_path)
+        parent_inode = self.__get_inode(parent_dir)
+        
+        assert isinstance(parent_inode, DirectoryInode), "Parent inode must be a directory"
+    
+        if name not in parent_inode.entries:
+            raise Exception(f"File '{file_path}' does not exist!")
+    
+        # Get the inode for the file.
+        file_inode: Inode = self.__get_inode_by_number(parent_inode.entries[name])
+        
+        if not isinstance(file_inode, RegularFileInode):
+            raise Exception(f"'{file_path}' is not a regular file!")
+    
+        # Read data from the allocated blocks.
+        data = ""
+    
+        for block_num in file_inode.data.values():
+            block_data = self.__read_from_data_block(block_num)
+            data += block_data
+    
+        result = data[offset:offset + size]
+        print(f"Read {len(result)} bytes from '{file_path}' starting at offset {offset}. Result: {result}")
+        return result
+    
+    def list_directory(self, path: str) -> List[str]:
+        """
+        List the contents of a directory at the specified path.
+        If the directory doesn't exist, throw an exception.
+
+        Args:
+        path (str): The absolute path of the directory to list.
+
+        Returns:
+        List[str]: A list of entries in the directory.
+
+        Raises:
+        Exception: If the directory doesn't exist or if the inode type is invalid.
+        """
+        parent_dir, name = self.__parse_path(path)
+        parent_inode = self.__get_inode(parent_dir)
+        
+        assert isinstance(parent_inode, DirectoryInode), "Parent inode must be a directory"
+    
+        if name not in parent_inode.entries:
+            raise Exception(f"Directory '{path}' does not exist!")
+    
+        # Get the inode for the directory.
+        dir_inode: Inode = self.__get_inode_by_number(parent_inode.entries[name])
+        
+        if not isinstance(dir_inode, DirectoryInode):
+            raise Exception(f"'{path}' is not a directory!")
+    
+        directories = list(dir_inode.entries.keys())
+        print(f"Contents of directory '{path}': {directories}")
+        return directories

@@ -1,7 +1,4 @@
 import abc
-import json
-import math
-import os
 from typing import List
 
 class FileSystem(abc.ABC):
@@ -45,7 +42,7 @@ class FileSystem(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def write_file(self, path: str, data: bytes, offset: int) -> None:
+    def write_file(self, path: str, data: str) -> None:
         """
         Write bytes to a file starting at the specified offset.
         May trigger block allocations or update write-ahead logs depending on the implementation.
@@ -54,6 +51,26 @@ class FileSystem(abc.ABC):
             path (str): The file path.
             data (bytes): The data to write.
             offset (int): The starting byte offset for the write.
+        """
+        pass
+
+    @abc.abstractmethod
+    def create_directory(self, path: str) -> None:
+        """
+        Create a new directory in the file system.
+
+        Args:
+            path (str): The path of the directory to create.
+        """
+        pass
+
+    @abc.abstractmethod
+    def delete_directory(self, path: str) -> None:
+        """
+        Delete a directory from the file system.
+
+        Args:
+            path (str): The path of the directory to delete.
         """
         pass
 
@@ -67,27 +84,5 @@ class FileSystem(abc.ABC):
 
         Returns:
             List[str]: A list of file and directory names.
-        """
-        pass
-
-    @abc.abstractmethod
-    def open_file(self, path: str, mode: str) -> None:
-        """
-        Open a file with a given mode (e.g., 'r' for read, 'w' for write, etc.).
-        This can be used to track open handles or set file-specific state.
-
-        Args:
-            path (str): The file path.
-            mode (str): Mode in which to open the file.
-        """
-        pass
-
-    @abc.abstractmethod
-    def close_file(self, path: str) -> None:
-        """
-        Close an open file, releasing any resources or locks.
-
-        Args:
-            path (str): The file path.
         """
         pass
