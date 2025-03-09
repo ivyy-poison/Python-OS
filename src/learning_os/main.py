@@ -34,8 +34,9 @@ def main():
     fs.create_directory("/dir2")
     fs.create_file("/dir1/file1.txt")
     fs.create_file("/file2.txt")
-
+    fs.write_to_file("/dir1/file1.txt", "abcdefghijklmnopqrstuvwxyz")
     fs.delete_file("/dir1/file1.txt")
-    fs.delete_directory("/dir2")
+    # fs.delete_file("/dir1/file1.txt")
+    # fs.delete_directory("/dir2")
     # fs.delete_directory("/dir1")
     

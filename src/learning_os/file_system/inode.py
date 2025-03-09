@@ -54,7 +54,7 @@ class DirectoryInode(Inode):
 class RegularFileInode(Inode):
     def __init__(self, inode_number: int):
         super().__init__(inode_number, "file")
-        self.data: str = ""  # for a simple implementation, storing file content as a string
+        self.data: Dict[int, int] = {}
         self.size: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,7 +74,7 @@ class RegularFileInode(Inode):
         inode.file_type = data["file_type"]
         inode.created_at = data["created_at"]
         inode.modified_at = data["modified_at"]
-        inode.data = data["data"]
+        inode.data = data.get("data", {})
         inode.size = data["size"]
 
         return inode
