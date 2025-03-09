@@ -11,7 +11,8 @@ Todo:
 - ~~Implement Completely Fair Scheduler (CFS)~~
   - Potentially implement own red-black tree
   - Potentially incorporate priority
-- Implement File System
+- ~~Implement basic File System~~
+  - Separate out file system and storage manager class, for potentially exploring RAID, SSD, disk, WAL, etc.
 - Build extensible design for IOManager, then potentially expand into memory and disk management simulations
 - Further away type of goals include: Simulating memory management and file systems (If I even get that far)
 - Improve logging for monitoring of various components
