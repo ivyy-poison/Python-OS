@@ -136,73 +136,48 @@ class BasicFileSystem:
                 raise Exception(f"Inode {current_inode_num} not found in inode table!")
         return current_inode_num
 
-    def create_directory(self, path: str) -> None:
+    def __create_inode(self, path: str, inode_type: str) -> None:
         """
-        Creates a new directory given an absolute path.
+        Creates a new inode (directory or file) given an absolute path.
         If the parent directory doesn't exist, throw an exception.
         Otherwise, allocate a free inode, mark it in the bitmap,
-        create a directory inode, add it to the inode table,
+        create the inode, add it to the inode table,
         update the parent directory's entries, and persist the changes.
         """
-        parent_dir, new_dir_name = self.__parse_path(path)
+        parent_dir, new_name = self.__parse_path(path)
 
         inode_table = self.__get_inode_table()
 
         parent_inode_num = self.__get_inode(parent_dir)
 
-        # Check if new directory already exists in parent.
+        # Check if new inode already exists in parent.
         parent_inode = inode_table.get(str(parent_inode_num))
-        if new_dir_name in parent_inode.get("entries", {}):
+        if new_name in parent_inode.get("entries", {}):
             return
 
         # Find first available inode from the inode bitmap.
         free_inode_num = self.__allocate_inode()
 
-        # Create the new directory inode.
-        new_dir_inode = DirectoryInode(free_inode_num)
-        inode_table[str(free_inode_num)] = new_dir_inode.to_dict()
+        # Create the new inode.
+        if inode_type == "directory":
+            new_inode = DirectoryInode(free_inode_num)
+        elif inode_type == "file":
+            new_inode = RegularFileInode(free_inode_num)
+        else:
+            raise Exception("Invalid inode type")
+
+        inode_table[str(free_inode_num)] = new_inode.to_dict()
 
         # Update parent's directory entries.
-        parent_inode.setdefault("entries", {})[new_dir_name] = free_inode_num
+        parent_inode.setdefault("entries", {})[new_name] = free_inode_num
         parent_inode["modified_at"] = time.time()
 
         # Persist changes back to storage.
         self.__persist_storage()
-        print(f"Directory '{path}' created with inode {free_inode_num}.")
+        print(f"{inode_type.capitalize()} '{path}' created with inode {free_inode_num}.")
+
+    def create_directory(self, path: str) -> None:
+        self.__create_inode(path, "directory")
 
     def create_file(self, path: str) -> None:
-        """
-        Creates a new file given an absolute path.
-        If the parent directory doesn't exist, throw an exception.
-        Otherwise, allocate a free inode, mark it in the bitmap,
-        create a regular file inode, add it to the inode table,
-        update the parent directory's entries, and persist the changes.
-        """
-        parent_dir, new_file_name = self.__parse_path(path)
-
-        # Read entire storage so we can update it.
-        inode_table: Dict[str, Any] = self.__get_inode_table()
-
-        # Find the parent directory inode.
-        # If creating "/file", the parent is root (inode 0)
-        parent_inode_num = self.__get_inode(parent_dir)
-
-        # Check if new file already exists in parent.
-        parent_inode = inode_table.get(str(parent_inode_num))
-        if new_file_name in parent_inode.get("entries", {}):
-            return
-
-        # Find first available inode from the inode bitmap.
-        free_inode_num = self.__allocate_inode()
-
-        # Create the new file inode.
-        new_file_inode = RegularFileInode(free_inode_num)
-
-        inode_table[str(free_inode_num)] = new_file_inode.to_dict()
-        # Update parent's directory entries.
-        parent_inode.setdefault("entries", {})[new_file_name] = free_inode_num
-        parent_inode["modified_at"] = time.time()
-
-        # Persist changes back to storage.
-        self.__persist_storage()
-        print(f"File '{path}' created with inode {free_inode_num}.")
+        self.__create_inode(path, "file")
