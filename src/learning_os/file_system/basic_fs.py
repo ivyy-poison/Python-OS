@@ -174,3 +174,50 @@ class BasicFileSystem:
 
     def create_file(self, path: str) -> None:
         self.__create_inode(path, "file")
+
+    def __delete_inode(self, path: str, inode_type: str) -> None:
+        """
+        Deletes an inode (directory or file) given an absolute path.
+        If the inode doesn't exist, throw an exception.
+        Otherwise, mark it as free in the bitmap,
+        remove it from the inode table,
+        update the parent directory's entries, and persist the changes.
+        """
+        parent_dir, name = self.__parse_path(path)
+        parent_inode: Inode = self.__get_inode(parent_dir)
+        
+        assert isinstance(parent_inode, DirectoryInode), "Parent inode must be a directory"
+    
+        if name not in parent_inode.entries:
+            raise Exception(f"{inode_type.capitalize()} '{path}' does not exist!")
+    
+        # Delete the inode.
+        inode_num = parent_inode.entries[name]
+        inode_table = self.__get_inode_table()
+        inode_to_delete = Inode.from_dict(inode_table[str(inode_num)])
+    
+        if inode_type == "directory":
+            assert isinstance(inode_to_delete, DirectoryInode), "Inode type mismatch"
+            if inode_to_delete.entries:
+                raise Exception(f"Directory '{path}' is not empty and cannot be deleted!")
+    
+        del inode_table[str(inode_num)]
+        
+        # Mark the inode as free in the bitmap.
+        inode_bitmap = self.__get_inode_bitmap()
+        inode_bitmap[inode_num] = False
+    
+        # Remove from parent directory's entries.
+        del parent_inode.entries[name]
+        parent_inode.modified_at = time.time()
+    
+        self.__update_inode_table(parent_inode)
+    
+        self.__persist_storage()
+        print(f"{inode_type.capitalize()} '{path}' deleted.")
+
+    def delete_file(self, path: str) -> None:
+        self.__delete_inode(path, "file")
+
+    def delete_directory(self, path: str) -> None:
+        self.__delete_inode(path, "directory")
