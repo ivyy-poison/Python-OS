@@ -6,6 +6,8 @@ from typing import List, Dict, Tuple, Any
 from learning_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
 from learning_os.file_system import FileSystem
 
+SUPERBLOCK_KEY = "0"
+
 DEFAULT_TOTAL_BLOCKS = 128
 DEFAULT_BLOCK_SIZE = 10
 DEFAULT_TOTAL_INODES = 16
@@ -142,11 +144,10 @@ class BasicFileSystem(FileSystem):
         Raises:
         Exception: If the superblock is not found in the storage.
         """
-        SUPERBLOCK = 0
-        if str(SUPERBLOCK) not in self.storage:
+        if SUPERBLOCK_KEY not in self.storage:
             raise Exception("Superblock (key '0') not found in storage!")
         
-        return self.storage[str(SUPERBLOCK)]
+        return self.storage[SUPERBLOCK_KEY]
     
     def __get_data_bitmap(self) -> List[bool]:
         """
