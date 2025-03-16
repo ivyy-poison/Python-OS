@@ -17,7 +17,7 @@ class AllocationPolicy(abc.ABC):
 
 PAGE_SIZE = 4
 
-class FirstBlocksFit(AllocationPolicy):
+class FirstFit(AllocationPolicy):
     def __init__(self, total_memory: int, page_size: int = PAGE_SIZE):
         self.page_size = page_size
         self.total_memory = total_memory

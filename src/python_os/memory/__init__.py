@@ -1,5 +1,6 @@
-from .allocation_policy import AllocationPolicy
-from .heap_allocator import (
+from .simple.allocation_policy import AllocationPolicy
+from .simple.allocator import MemoryManager
+from .dynamic_allocation import (
     FirstFitAllocator,
     BestFitAllocator,
     WorstFitAllocator,
@@ -7,3 +8,6 @@ from .heap_allocator import (
     MallocAllocator,
     BuddyAllocator
 )
+
+from .page_table_entry import PageTableEntry
+from .page_table import PageTable
