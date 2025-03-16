@@ -1,7 +1,7 @@
 import struct
 
 from typing import Tuple, List
-from learning_os.memory import XFitAllocator
+from python_os.memory import XFitAllocator
 
 class BestFitAllocator(XFitAllocator):
     """

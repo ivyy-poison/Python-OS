@@ -3,8 +3,8 @@ import json
 import math
 import time
 from typing import List, Dict, Tuple, Any
-from learning_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
-from learning_os.file_system import FileSystem
+from python_os.file_system.inode import DirectoryInode, RegularFileInode, Inode
+from python_os.file_system import FileSystem
 
 DEFAULT_TOTAL_BLOCKS = 128
 DEFAULT_BLOCK_SIZE = 10

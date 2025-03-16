@@ -1,5 +1,5 @@
 import abc
-from learning_os.process import Process
+from python_os.process import Process
 
 class Scheduler(abc.ABC):
     """

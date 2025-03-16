@@ -1,5 +1,5 @@
-from learning_os.process import Process
-from learning_os.scheduler import Scheduler
+from python_os.process import Process
+from python_os.scheduler import Scheduler
 
 from sortedcontainers import SortedDict
 from typing import Dict, Tuple

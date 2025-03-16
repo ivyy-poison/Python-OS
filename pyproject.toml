@@ -1,11 +1,11 @@
 [project]
-name = "learning-os"
+name = "python-os"
 version = "0.1.0"
 description = "Default template for PDM package"
 authors = [
     {name = "Ivan", email = "tan.yuhao.ivan@gmail.com"},
 ]
-dependencies = ["sortedcontainers>=2.4.0", "ijson>=3.3.0"]
+dependencies = ["sortedcontainers>=2.4.0"]
 requires-python = "~=3.13"
 readme = "README.md"
 license = {text = "MIT"}
@@ -15,7 +15,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [project.scripts]
-test-run = "learning_os.main:main"
+test-run = "python_os.main:main"
 
 [tool.pdm]
 distribution = true

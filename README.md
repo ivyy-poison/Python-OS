@@ -1,4 +1,4 @@
-# learning-os
+# Python-Os
 bro claims he wants to learn about os but programs in python 
 
 ## Reason for doing this

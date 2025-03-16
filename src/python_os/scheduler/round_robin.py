@@ -1,6 +1,6 @@
 from collections import deque
-from learning_os.process import Process, ProcessState
-from learning_os.scheduler import Scheduler
+from python_os.process import Process, ProcessState
+from python_os.scheduler import Scheduler
 from typing import Dict, List, Deque
 
 class RoundRobinScheduler(Scheduler):

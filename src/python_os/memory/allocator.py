@@ -1,5 +1,5 @@
-from learning_os.process import Process
-from learning_os.memory import AllocationPolicy
+from python_os.process import Process
+from python_os.memory import AllocationPolicy
 from typing import Any, Dict, Tuple
 
 import abc

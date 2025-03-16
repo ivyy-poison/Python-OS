@@ -5,19 +5,10 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:0f3391b85045c69054db370257b612d50cab401c35355b5a48c442670a066c7b"
+content_hash = "sha256:b5d75a70fa3a47e587e88db6359a7191ac1b31273f462aacfd6051267222dec9"
 
 [[metadata.targets]]
 requires_python = "~=3.13"
-
-[[package]]
-name = "ijson"
-version = "3.3.0"
-summary = "Iterative JSON parser with standard Python iterator interfaces"
-groups = ["default"]
-files = [
-    {file = "ijson-3.3.0.tar.gz", hash = "sha256:7f172e6ba1bee0d4c8f8ebd639577bfe429dee0f3f96775a067b8bae4492d8a0"},
-]
 
 [[package]]
 name = "sortedcontainers"

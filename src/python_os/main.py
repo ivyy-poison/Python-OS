@@ -1,14 +1,14 @@
-from learning_os.cpu import CPU
-from learning_os.scheduler import (
+from python_os.cpu import CPU
+from python_os.scheduler import (
     RoundRobinScheduler, 
     SimpleScheduler, 
     MultiLevelFeedbackQueueScheduler, 
     LotteryScheduler,
     CompletelyFairScheduler
 )
-from learning_os.process import Process
-from learning_os.io_manager import IOManager
-from learning_os.file_system import BasicFileSystem
+from python_os.process import Process
+from python_os.io_manager import IOManager
+from python_os.file_system import BasicFileSystem
 
 def main():
     scheduler = RoundRobinScheduler()

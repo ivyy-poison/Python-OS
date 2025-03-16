@@ -1,5 +1,5 @@
-from learning_os.process import Process, ProcessState
-from learning_os.scheduler import Scheduler
+from python_os.process import Process, ProcessState
+from python_os.scheduler import Scheduler
 
 from collections import deque
 from typing import Dict, List, Deque
@@ -47,7 +47,7 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         if process.pid not in self.process_levels:
             self.process_levels[process.pid] = 0
             self.process_time_in_level[process.pid] = 0
-            from learning_os.cpu import CPU 
+            from python_os.cpu import CPU 
             curr_time = CPU.get_current_time()
             self.process_last_boost[process.pid] = curr_time
 
@@ -66,7 +66,7 @@ class MultiLevelFeedbackQueueScheduler(Scheduler):
         check if the time elapsed since its last boost (as stored in process_last_boost)
         is greater than or equal to boost_threshold. If so, move it to the highest priority.
         """
-        from learning_os.cpu import CPU  
+        from python_os.cpu import CPU  
         curr_time = CPU.get_current_time()  
 
         for level in range(1, len(self.queues)):
