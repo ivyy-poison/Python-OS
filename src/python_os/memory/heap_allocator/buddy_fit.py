@@ -2,7 +2,7 @@ import math
 import struct
 import abc
 from typing import Dict, List
-from python_os.memory.heap_allocator.malloc import MallocAllocator
+from python_os.memory import MallocAllocator
 
 class BuddyAllocator(MallocAllocator):
     HEADER_SIZE = 8

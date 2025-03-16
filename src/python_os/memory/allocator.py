@@ -1,5 +1,5 @@
 from python_os.process import Process
-from python_os.memory import AllocationPolicy
+from python_os.memory import AllocationPolicy, PageTable, PageTableEntry
 from typing import Any, Dict, Tuple
 
 import abc
@@ -8,6 +8,7 @@ class MemoryManager(abc.ABC):
     """
     Abstract base class for memory management strategies.
     """
+    PAGE_SIZE = 4
 
     @abc.abstractmethod
     def allocate(self, process: Process, size: int) -> None:
@@ -20,11 +21,8 @@ class MemoryManager(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_memory_usage(process: Process) -> Any:
-
+    def retrieve(self, process: Process, virtual_address: int) -> Any:
         pass
-
-PAGE_SIZE = 4
 
 class BaseAndBoundManager(MemoryManager):
     def __init__(self, total_memory: int, allocation_policy: AllocationPolicy):
@@ -37,7 +35,7 @@ class BaseAndBoundManager(MemoryManager):
         """
         Allocate a block of memory for the given process using the provided allocation policy.
         """
-        assert size % PAGE_SIZE == 0, f"Size allocated must be a multiple of {PAGE_SIZE}."
+        assert size % MemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {MemoryManager.PAGE_SIZE}."
 
         if process.pid in self.process_to_base_and_bound:
             raise MemoryError("Process already has allocated memory.")
@@ -71,6 +69,21 @@ class BaseAndBoundManager(MemoryManager):
             "bound": bound,
             "size": bound - base
         }
+    
+    def retrieve(self, process: Process, virtual_address: int) -> Any:
+        """
+        Retrieve the value at the given virtual address for the specified process.
+        """
+        if process.pid not in self.process_to_base_and_bound:
+            raise MemoryError("Process does not have allocated memory.")
+
+        base, bound = self.process_to_base_and_bound[process.pid]
+        size = bound - base
+
+        if virtual_address >= size:
+            raise MemoryError("Virtual address is out of bounds.")
+
+        return self.memory.get(base + virtual_address, None)
 
 class SegmentedManager(MemoryManager):
     def __init__(self, total_memory: int, allocation_policy: AllocationPolicy):
@@ -86,7 +99,7 @@ class SegmentedManager(MemoryManager):
 
         ## Assume a model of a process having three segments: Code, heap, and stack.
         ## Also assume that the segments are of equal size.
-        assert size % PAGE_SIZE == 0, f"Size allocated must be a multiple of {PAGE_SIZE}."
+        assert size % MemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {MemoryManager.PAGE_SIZE}."
         assert size % 3 == 0, f"Size allocated must be a multiple of 3."
 
         if process.pid not in self.process_to_segments:
@@ -130,3 +143,26 @@ class SegmentedManager(MemoryManager):
             }
             for segment_name, (base, size) in self.process_to_segments[process.pid].items()
         }
+    
+    def retrieve(self, process: Process, virtual_address: int) -> Any:
+        """
+        Retrieve the value at the given virtual address for the specified process.
+        """
+        if process.pid not in self.process_to_segments:
+            raise MemoryError("Process does not have allocated memory.")
+        
+        total_process_address_space = sum(
+            bound - base for base, bound in self.process_to_segments[process.pid].values()
+        )
+        if virtual_address >= total_process_address_space:
+            raise MemoryError("Virtual address is out of bounds.")
+        
+        ## Find the segment that contains the virtual address
+        segment_size = total_process_address_space // 3
+        segment_index = virtual_address // segment_size
+        segment_name = ["code", "heap", "stack"][segment_index]
+
+        base, _ = self.process_to_segments[process.pid][segment_name]
+        offset = virtual_address % segment_size
+        return self.memory.get(base + offset, None)
+    
