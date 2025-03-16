@@ -11,6 +11,10 @@ DEFAULT_BLOCK_SIZE = 10
 DEFAULT_TOTAL_INODES = 16
 
 class BasicFileSystem(FileSystem):
+    """
+    A model of a basic file system that uses a JSON file as storage.
+    """
+    
     def __init__(self, storage_path: str):
         self.storage_path = storage_path
 

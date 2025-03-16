@@ -11,10 +11,18 @@ Todo:
 - ~~Implement Completely Fair Scheduler (CFS)~~
   - Potentially implement own red-black tree
   - Potentially incorporate priority
-- ~~Implement basic File System~~
-  - Separate out file system and storage manager class, for potentially exploring RAID, SSD, disk, WAL, etc.
-- Build extensible design for IOManager, then potentially expand into memory and disk management simulations
-- Further away type of goals include: Simulating memory management and file systems (If I even get that far)
+- ~~Implement basic File System with JSON storage~~
+  - Separate out file system and storage manager class, 
+    - This is for potentially exploring RAID, SSD, disk, WAL, etc.
+
+- ~~Build memory management model~~
+  - ~~Explore malloc heap allocation policies~~
+    - More elaborate schemes, eg: Buddy fit
+  - ~~Build per-process memory allocator model~~
+    - ~~Basic (base and bound)~~
+    - ~~Segmentation~~
+    - Paging 
+
 - Improve logging for monitoring of various components
   - Note: Stretch goals because I presently have no intentions of incorporating external dependencies into this model yet.
   - But ideally I wish to be able to isolate logging not only by levels but by components as well.
