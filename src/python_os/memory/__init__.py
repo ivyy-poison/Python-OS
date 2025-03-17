@@ -1,5 +1,5 @@
-from .simple.allocation_policy import AllocationPolicy
-from .simple.allocator import MemoryManager
+from .simple.allocation_policy import AllocationPolicy as SimpleAllocationPolicy
+from .simple.allocator import MemoryManager as SimpleMemoryManager
 from .dynamic_allocation import (
     FirstFitAllocator,
     BestFitAllocator,

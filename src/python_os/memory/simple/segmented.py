@@ -1,9 +1,9 @@
 from python_os.process import Process
-from python_os.memory import AllocationPolicy, MemoryManager
+from python_os.memory import SimpleAllocationPolicy, SimpleMemoryManager
 from typing import Any, Dict, Tuple
 
-class SegmentedManager(MemoryManager):
-    def __init__(self, total_memory: int, allocation_policy: AllocationPolicy):
+class SegmentedManager(SimpleMemoryManager):
+    def __init__(self, total_memory: int, allocation_policy: SimpleAllocationPolicy):
         self.total_memory = total_memory
         self.allocation_policy = allocation_policy
         self.memory = {}
@@ -16,7 +16,7 @@ class SegmentedManager(MemoryManager):
 
         ## Assume a model of a process having three segments: Code, heap, and stack.
         ## Also assume that the segments are of equal size.
-        assert size % MemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {MemoryManager.PAGE_SIZE}."
+        assert size % SimpleMemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {SimpleMemoryManager.PAGE_SIZE}."
         assert size % 3 == 0, f"Size allocated must be a multiple of 3."
 
         if process.pid not in self.process_to_segments:

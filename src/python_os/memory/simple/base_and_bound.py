@@ -1,9 +1,9 @@
 from python_os.process import Process
-from python_os.memory import AllocationPolicy, MemoryManager
+from python_os.memory import SimpleAllocationPolicy, SimpleMemoryManager
 from typing import Any, Dict, Tuple
 
-class BaseAndBoundManager(MemoryManager):
-    def __init__(self, total_memory: int, allocation_policy: AllocationPolicy):
+class BaseAndBoundManager(SimpleMemoryManager):
+    def __init__(self, total_memory: int, allocation_policy: SimpleAllocationPolicy):
         self.total_memory = total_memory
         self.allocation_policy = allocation_policy
         self.memory = {}
@@ -13,7 +13,7 @@ class BaseAndBoundManager(MemoryManager):
         """
         Allocate a block of memory for the given process using the provided allocation policy.
         """
-        assert size % MemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {MemoryManager.PAGE_SIZE}."
+        assert size % SimpleMemoryManager.PAGE_SIZE == 0, f"Size allocated must be a multiple of {SimpleMemoryManager.PAGE_SIZE}."
 
         if process.pid in self.process_to_base_and_bound:
             raise MemoryError("Process already has allocated memory.")
